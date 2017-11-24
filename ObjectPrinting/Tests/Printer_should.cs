@@ -20,7 +20,7 @@ namespace ObjectPrinting.Tests
         public void ExcludeType()
         {
             var expected = "Person\r\n\tName = Valera\r\n\tHeight = 200,5\r\n\tAge = 10\r\n";
-            printer = printer.ExcludeType<Guid>();
+            printer = printer.Exclude<Guid>();
             printer.PrintToString(person).Should().Be(expected);
         }
     }
