@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Linq.Expressions;
+using System.Reflection;
 
 namespace ObjectPrinting
 {
-    public class PropertyPrintingConfig<TOwner, TProp> : PrintingConfig<TOwner>, IPropertyConfig<TOwner, TProp>
+    public class PropertyPrintingConfig<TOwner, TProp> : IPropertyConfig<TOwner, TProp>
     {
         public PropertyPrintingConfig(PrintingConfig<TOwner> config)
         {
@@ -12,7 +13,10 @@ namespace ObjectPrinting
 
         public PrintingConfig<TOwner> Using(Expression<Func<TProp, string>> serializer)
         {
-            return PrintingConfig.SetSerializer(serializer);
+            var type = typeof(PrintingConfig<TOwner>);
+            var method = type.GetMethod("SetSerializerFor", BindingFlags.Instance | BindingFlags.NonPublic)?
+                             .MakeGenericMethod(typeof(TProp));
+            return (PrintingConfig<TOwner>)method?.Invoke(PrintingConfig, new object[] { serializer });
         }
 
         public PrintingConfig<TOwner> PrintingConfig { get; }

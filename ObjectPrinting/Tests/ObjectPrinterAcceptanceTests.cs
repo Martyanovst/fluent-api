@@ -12,25 +12,26 @@ namespace ObjectPrinting.Tests
         {
             var person = new Person { Name = "Alex", Age = 19 };
 
-            var printer = ObjectPrinter.For<Person>();
-            //1. Исключить из сериализации свойства определенного типа
-            //.Exclude<string>();
-            //2. Указать альтернативный способ сериализации для определенного типа
-            //.For<string>().Using(x => x.ToLower());
-            //3. Для числовых типов указать культуру
-            //.For<int>().Using(CultureInfo.CreateSpecificCulture("fr-FR"));
-            //4. Настроить сериализацию конкретного свойства
-            //.Select(x => x.Age).Using(x => (x - 2).ToString());
-            //5. Настроить обрезание строковых свойств (метод должен быть виден только для строковых свойств)
-            //.Select(x => x.Name).CuttingBy(3);
+            var printer = ObjectPrinter.For<Person>()
+                //1. Исключить из сериализации свойства определенного типа
+                //.Exclude<string>();
+                //2. Указать альтернативный способ сериализации для определенного типа
+                .ForType<string>().Using(x => x.ToLower())
+                //3. Для числовых типов указать культуру
+                .ForType<int>().Using(CultureInfo.CreateSpecificCulture("fr-FR"))
+                //4. Настроить сериализацию конкретного свойства
+                .ForProperty(x => x.Age).Using(x => (x - 2).ToString())
+                //5. Настроить обрезание строковых свойств (метод должен быть виден только для строковых свойств)
+                .ForProperty(x => x.Name).CuttingBy(3);
             //6. Исключить из сериализации конкретного свойства
             //.Exclude(x => x.Age);
 
-            string s1 = printer.PrintToString(person);
+            var s1 = printer.PrintToString(person);
+            Console.WriteLine(s1);
             //7. Синтаксический сахар в виде метода расширения, сериализующего по-умолчанию
             //s1 = person.PrintToString();
             //8. ...с конфигурированием
-            //s1 = person.PrintToString(x => x.Exclude<int>().For<string>().Using(y => y.Trim()));
+            //s1 = person.PrintToString(x => x.Exclude<int>().ForType<string>().Using(y => y.Trim()));
         }
     }
 }
