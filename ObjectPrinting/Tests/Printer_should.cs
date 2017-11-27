@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using FluentAssertions;
 using NUnit.Framework;
 
@@ -19,9 +20,64 @@ namespace ObjectPrinting.Tests
         [Test]
         public void ExcludeType()
         {
-            var expected = "Person\r\n\tName = Valera\r\n\tHeight = 200,5\r\n\tAge = 10\r\n";
             printer = printer.Exclude<Guid>();
+
+            var expected = "Person\r\n\tName = Valera\r\n\tHeight = 200,5\r\n\tAge = 10\r\n";
             printer.PrintToString(person).Should().Be(expected);
+        }
+
+        [Test]
+        public void UseSpecialSerializersForTypes()
+        {
+            printer = printer.ForType<string>().Using(x => x.ToUpper());
+
+            var expected = "Person\r\n\tId = Guid\r\n\tName = VALERA\r\n\tHeight = 200,5\r\n\tAge = 10\r\n";
+            printer.PrintToString(person).Should().Be(expected);
+        }
+
+        [Test]
+        public void UseSpecialSerializersForProperties()
+        {
+            printer = printer.ForProperty(x => x.Age).Using(x => (x * 10).ToString());
+
+            var expected = "Person\r\n\tId = Guid\r\n\tName = Valera\r\n\tHeight = 200,5\r\n\tAge = 100\r\n";
+            printer.PrintToString(person).Should().Be(expected);
+        }
+
+        [Test]
+        public void UseTrimmerForStringProperties()
+        {
+            printer = printer.ForProperty(x => x.Name).CutTo(2);
+
+            var expected = "Person\r\n\tId = Guid\r\n\tName = lera\r\n\tHeight = 200,5\r\n\tAge = 10\r\n";
+            printer.PrintToString(person).Should().Be(expected);
+        }
+
+        [Test]
+        public void ExcludeProperties()
+        {
+            printer = printer.Exclude(x => x.Height);
+
+            var expected = "Person\r\n\tId = Guid\r\n\tName = Valera\r\n\tAge = 10\r\n";
+            printer.PrintToString(person).Should().Be(expected);
+        }
+
+        [Test]
+        public void ExtendObjectToDefaultPrinting()
+        {
+            var actual = person.PrintToString();
+            var expected = "Person\r\n\tId = Guid\r\n\tName = Valera\r\n\tHeight = 200,5\r\n\tAge = 10\r\n";
+            actual.Should().Be(expected);
+        }
+
+        [Test]
+        public void ExtendObjectToCustomPrinting()
+        {
+            var actual = person.PrintToString(x => x.Exclude<Guid>()
+                               .ForProperty(p => p.Name)
+                               .Using(n => n.ToLower()));
+            var expected = "Person\r\n\tName = valera\r\n\tHeight = 200,5\r\n\tAge = 10\r\n";
+            actual.Should().Be(expected);
         }
     }
 }

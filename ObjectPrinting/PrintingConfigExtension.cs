@@ -7,7 +7,7 @@ namespace ObjectPrinting
 {
     public static class PropertyPrintingConfigExtension
     {
-        private static PrintingConfig<TOwner> CallCultureSet<TOwner, TProp>(PrintingConfig<TOwner> config, CultureInfo culture)
+        private static PrintingConfig<TOwner> SetCulture<TOwner, TProp>(PrintingConfig<TOwner> config, CultureInfo culture)
         {
             var type = typeof(PrintingConfig<TOwner>);
             var method = type.GetMethod("SetCulture", BindingFlags.Instance | BindingFlags.NonPublic)?
@@ -20,22 +20,22 @@ namespace ObjectPrinting
             this PropertyPrintingConfig<TOwner, int> config,
             CultureInfo culture)
         {
-            return CallCultureSet<TOwner, int>(config.PrintingConfig, culture);
+            return SetCulture<TOwner, int>(config.PrintingConfig, culture);
         }
 
         public static PrintingConfig<TOwner> Using<TOwner>(
             this PropertyPrintingConfig<TOwner, long> config, CultureInfo culture)
         {
-            return CallCultureSet<TOwner, long>(config.PrintingConfig, culture);
+            return SetCulture<TOwner, long>(config.PrintingConfig, culture);
         }
 
         public static PrintingConfig<TOwner> Using<TOwner>(
             this PropertyPrintingConfig<TOwner, double> config, CultureInfo culture)
         {
-            return CallCultureSet<TOwner, double>(config.PrintingConfig, culture);
+            return SetCulture<TOwner, double>(config.PrintingConfig, culture);
         }
 
-        public static PrintingConfig<TOwner> CuttingBy<TOwner>(
+        public static PrintingConfig<TOwner> CutTo<TOwner>(
             this PropertyPrintingConfig<TOwner, string> config, int count)
         {
             var type = typeof(PrintingConfig<TOwner>);

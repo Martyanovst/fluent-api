@@ -152,7 +152,7 @@ namespace ObjectPrinting
                 var culture = CulturesForNumbersTypes.ContainsKey(type)
                     ? CulturesForNumbersTypes[type]
                     : CultureInfo.InvariantCulture;
-                return obj.ToString().ToLower(culture) + Environment.NewLine;
+                return obj.ToString().ToString(culture.NumberFormat) + Environment.NewLine;
             }
 
             if (finalTypes.Contains(type))
@@ -170,7 +170,9 @@ namespace ObjectPrinting
                 return null;
 
             if (propertyType == typeof(string))
-                propertyValue = Serialize(propertyValue, StringPropertiesTrimmer[propertyName]);
+                propertyValue = StringPropertiesTrimmer.ContainsKey(propertyName)
+                    ? Serialize(propertyValue, StringPropertiesTrimmer[propertyName])
+                    : propertyValue;
 
             if (PropetiesPrinters.ContainsKey(propertyName))
                 return Serialize(propertyValue, PropetiesPrinters[propertyName]) + Environment.NewLine;
