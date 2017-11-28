@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Reflection.Emit;
 using System.Text;
 
 namespace ObjectPrinting
@@ -18,6 +19,12 @@ namespace ObjectPrinting
         private IDictionary<string, Func<string, string>> StringPropertiesTrimmer { get; }
         private string selectedProperty;
 
+        public PrintingConfig() : this(new HashSet<Type>(), new HashSet<string>(),
+           new Dictionary<Type, Delegate>(), new Dictionary<string, Delegate>(),
+           new Dictionary<Type, CultureInfo>(), new Dictionary<string, Func<string, string>>())
+        {
+        }
+
         private PrintingConfig(IEnumerable<Type> ExcludedTypes, IEnumerable<string> ExcludedProperties,
              IDictionary<Type, Delegate> TypesPrinters, IDictionary<string, Delegate> PropetiesPrinters,
              IDictionary<Type, CultureInfo> culturesForNumbersTypes, IDictionary<string, Func<string, string>> stringPropertiesTrimmer)
@@ -31,12 +38,6 @@ namespace ObjectPrinting
             selectedProperty = string.Empty;
         }
 
-        public PrintingConfig() : this(new HashSet<Type>(), new HashSet<string>(),
-            new Dictionary<Type, Delegate>(), new Dictionary<string, Delegate>(),
-            new Dictionary<Type, CultureInfo>(), new Dictionary<string, Func<string, string>>())
-        {
-        }
-
         public PropertyPrintingConfig<TOwner, TProp> ForProperty<TProp>(Expression<Func<TOwner, TProp>> serializer)
         {
             var propertyInfo = ((MemberExpression)serializer.Body).Member as PropertyInfo;
@@ -47,54 +48,6 @@ namespace ObjectPrinting
         public PropertyPrintingConfig<TOwner, TProp> ForType<TProp>()
         {
             return new PropertyPrintingConfig<TOwner, TProp>(this);
-        }
-
-        private PrintingConfig<TOwner> SetSerializerFor<TProp>(Expression<Func<TProp, string>> serializer)
-        {
-            var func = serializer.Compile();
-            var typesPrinters = new Dictionary<Type, Delegate>(TypesPrinters);
-            var propertyPrinters = new Dictionary<string, Delegate>(PropetiesPrinters);
-            if (string.IsNullOrEmpty(selectedProperty))
-                typesPrinters[typeof(TProp)] = func;
-            else
-                propertyPrinters[selectedProperty] = func;
-            return new PrintingConfig<TOwner>(ExcludedTypes, ExcludedProperties,
-                typesPrinters, propertyPrinters, CulturesForNumbersTypes, StringPropertiesTrimmer);
-        }
-
-        private PrintingConfig<TOwner> SetCulture<TProp>(CultureInfo culture)
-        {
-            var culturesForNumbersTypes = new Dictionary<Type, CultureInfo>(CulturesForNumbersTypes)
-            {
-                [typeof(TProp)] = culture
-            };
-            return new PrintingConfig<TOwner>(ExcludedTypes, ExcludedProperties, TypesPrinters,
-                PropetiesPrinters, culturesForNumbersTypes, StringPropertiesTrimmer);
-        }
-
-        private PrintingConfig<TOwner> SetStringTrimmer(int count)
-        {
-            if (count < 0)
-                throw new ArgumentException("Index should be a positive number");
-
-            var x = Expression.Parameter(typeof(string));
-            var methodInfo = typeof(string).GetMethod("Substring", new[] { typeof(int) });
-            var stringPropertiesTrimmer = new Dictionary<string, Func<string, string>>(StringPropertiesTrimmer);
-            var trimmer = Expression.Lambda<Func<string, string>>(
-                          Expression.Call(x, methodInfo,
-                          Expression.Constant(count)), x)
-                          .Compile();
-            if (string.IsNullOrEmpty(selectedProperty))
-            {
-                var properties = typeof(TOwner).GetProperties().Select(p => p.Name);
-                foreach (var propName in properties)
-                    stringPropertiesTrimmer[propName] = trimmer;
-            }
-            else
-                stringPropertiesTrimmer[selectedProperty] = trimmer;
-            selectedProperty = string.Empty;
-            return new PrintingConfig<TOwner>(ExcludedTypes, ExcludedProperties, TypesPrinters, PropetiesPrinters,
-                CulturesForNumbersTypes, stringPropertiesTrimmer);
         }
 
         public PrintingConfig<TOwner> Exclude<TProp>()
@@ -112,7 +65,9 @@ namespace ObjectPrinting
 
         public string PrintToString(TOwner obj)
         {
-            return PrintToString(obj, 0);
+            var type = typeof(TOwner);
+            return TypesPrinters.ContainsKey(type) ? Serialize(obj, TypesPrinters[type])
+                                : PrintToString(obj, 0);
         }
 
         private string PrintToString(object obj, int nestingLevel)
@@ -147,7 +102,7 @@ namespace ObjectPrinting
                 typeof(DateTime), typeof(TimeSpan)
             };
 
-            if (obj is int || obj is double || obj is float)
+            if (obj is int || obj is double || obj is long)
             {
                 var culture = CulturesForNumbersTypes.ContainsKey(type)
                     ? CulturesForNumbersTypes[type]
@@ -186,6 +141,51 @@ namespace ObjectPrinting
         private static string Serialize<TProp>(TProp value, Delegate serializer)
         {
             return serializer.DynamicInvoke(value).ToString();
+        }
+
+        internal PrintingConfig<TOwner> SetSerializerFor<TProp>(Expression<Func<TProp, string>> serializer)
+        {
+            var func = serializer.Compile();
+            var typesPrinters = new Dictionary<Type, Delegate>(TypesPrinters);
+            var propertyPrinters = new Dictionary<string, Delegate>(PropetiesPrinters);
+            if (string.IsNullOrEmpty(selectedProperty))
+                typesPrinters[typeof(TProp)] = func;
+            else
+                propertyPrinters[selectedProperty] = func;
+            return new PrintingConfig<TOwner>(ExcludedTypes, ExcludedProperties,
+                typesPrinters, propertyPrinters, CulturesForNumbersTypes, StringPropertiesTrimmer);
+        }
+
+        internal PrintingConfig<TOwner> SetCulture<TProp>(CultureInfo culture)
+        {
+            var culturesForNumbersTypes = new Dictionary<Type, CultureInfo>(CulturesForNumbersTypes)
+            {
+                [typeof(TProp)] = culture
+            };
+            return new PrintingConfig<TOwner>(ExcludedTypes, ExcludedProperties, TypesPrinters,
+                PropetiesPrinters, culturesForNumbersTypes, StringPropertiesTrimmer);
+        }
+
+        internal PrintingConfig<TOwner> SetStringTrimmer(int count)
+        {
+            if (count < 0)
+                throw new ArgumentException("Count should be a positive number");
+
+            Func<string, string> trimmer = x => x.Substring(count);
+
+            var stringPropertiesTrimmer = string.IsNullOrEmpty(selectedProperty) ? typeof(TOwner).GetProperties()
+                    .Where(x => x.PropertyType == typeof(string))
+                    .Select(p => p.Name)
+                    .ToDictionary(name => name, value => trimmer)
+                : new Dictionary<string, Func<string, string>>(StringPropertiesTrimmer)
+                {
+                    [selectedProperty] = trimmer
+                };
+
+            selectedProperty = string.Empty;
+
+            return new PrintingConfig<TOwner>(ExcludedTypes, ExcludedProperties, TypesPrinters, PropetiesPrinters,
+                                              CulturesForNumbersTypes, stringPropertiesTrimmer);
         }
     }
 }

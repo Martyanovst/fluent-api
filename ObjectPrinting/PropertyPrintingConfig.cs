@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq.Expressions;
-using System.Reflection;
 
 namespace ObjectPrinting
 {
@@ -13,10 +12,7 @@ namespace ObjectPrinting
 
         public PrintingConfig<TOwner> Using(Expression<Func<TProp, string>> serializer)
         {
-            var type = typeof(PrintingConfig<TOwner>);
-            var method = type.GetMethod("SetSerializerFor", BindingFlags.Instance | BindingFlags.NonPublic)?
-                             .MakeGenericMethod(typeof(TProp));
-            return (PrintingConfig<TOwner>)method?.Invoke(PrintingConfig, new object[] { serializer });
+            return PrintingConfig.SetSerializerFor(serializer);
         }
 
         public PrintingConfig<TOwner> PrintingConfig { get; }
