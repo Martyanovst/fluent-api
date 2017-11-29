@@ -180,7 +180,6 @@ namespace ObjectPrinting
                                         .Where(x => x.PropertyType == typeof(string))
                                         .Select(p => p.Name)
                                         .ToDictionary(name => name, value => trimmer)
-
                                         : new Dictionary<string, Func<string, string>>(StringPropertiesTrimmer)
                                         {
                                             [selectedProperty] = trimmer
