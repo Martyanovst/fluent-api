@@ -4,7 +4,6 @@ using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Reflection.Emit;
 using System.Text;
 
 namespace ObjectPrinting
@@ -60,14 +59,15 @@ namespace ObjectPrinting
         {
             var propertyInfo = ((MemberExpression)serializer.Body).Member as PropertyInfo;
             return new PrintingConfig<TOwner>(ExcludedTypes, ExcludedProperties.Concat(new[] { propertyInfo?.Name }),
-                TypesPrinters, PropetiesPrinters, CulturesForNumbersTypes, StringPropertiesTrimmer);
+                   TypesPrinters, PropetiesPrinters, CulturesForNumbersTypes, StringPropertiesTrimmer);
         }
 
         public string PrintToString(TOwner obj)
         {
-            var type = typeof(TOwner);
-            return TypesPrinters.ContainsKey(type) ? Serialize(obj, TypesPrinters[type])
-                                : PrintToString(obj, 0);
+            var typeOfObject = typeof(TOwner);
+            return TypesPrinters.ContainsKey(typeOfObject)
+                   ? Serialize(obj, TypesPrinters[typeOfObject])
+                   : PrintToString(obj, 0);
         }
 
         private string PrintToString(object obj, int nestingLevel)
@@ -79,15 +79,15 @@ namespace ObjectPrinting
             var identation = new string('\t', nestingLevel + 1);
             var type = obj.GetType();
 
-            var sb = new StringBuilder(type.Name + Environment.NewLine);
+            var stringBuilder = new StringBuilder(type.Name + Environment.NewLine);
 
             foreach (var propertyInfo in type.GetProperties())
             {
                 var propertyToPrint = SerializeProperty(obj, propertyInfo, nestingLevel);
                 if (propertyToPrint == null) continue;
-                sb.Append(identation + propertyInfo.Name + " = " + propertyToPrint);
+                stringBuilder.Append(identation + propertyInfo.Name + " = " + propertyToPrint);
             }
-            return sb.ToString();
+            return stringBuilder.ToString();
         }
 
         private string TrySerializeSimpleObject(object obj)
@@ -99,14 +99,14 @@ namespace ObjectPrinting
             var finalTypes = new[]
             {
                 typeof(int), typeof(double), typeof(float), typeof(string),
-                typeof(DateTime), typeof(TimeSpan)
+                typeof(DateTime), typeof(TimeSpan),typeof(Guid)
             };
 
             if (obj is int || obj is double || obj is long)
             {
                 var culture = CulturesForNumbersTypes.ContainsKey(type)
-                    ? CulturesForNumbersTypes[type]
-                    : CultureInfo.InvariantCulture;
+                              ? CulturesForNumbersTypes[type]
+                              : CultureInfo.InvariantCulture;
                 return obj.ToString().ToString(culture.NumberFormat) + Environment.NewLine;
             }
 
@@ -126,8 +126,8 @@ namespace ObjectPrinting
 
             if (propertyType == typeof(string))
                 propertyValue = StringPropertiesTrimmer.ContainsKey(propertyName)
-                    ? Serialize(propertyValue, StringPropertiesTrimmer[propertyName])
-                    : propertyValue;
+                              ? Serialize(propertyValue, StringPropertiesTrimmer[propertyName])
+                              : propertyValue;
 
             if (PropetiesPrinters.ContainsKey(propertyName))
                 return Serialize(propertyValue, PropetiesPrinters[propertyName]) + Environment.NewLine;
@@ -145,13 +145,15 @@ namespace ObjectPrinting
 
         internal PrintingConfig<TOwner> SetSerializerFor<TProp>(Expression<Func<TProp, string>> serializer)
         {
-            var func = serializer.Compile();
+            var printingFunction = serializer.Compile();
             var typesPrinters = new Dictionary<Type, Delegate>(TypesPrinters);
             var propertyPrinters = new Dictionary<string, Delegate>(PropetiesPrinters);
+
             if (string.IsNullOrEmpty(selectedProperty))
-                typesPrinters[typeof(TProp)] = func;
+                typesPrinters[typeof(TProp)] = printingFunction;
             else
-                propertyPrinters[selectedProperty] = func;
+                propertyPrinters[selectedProperty] = printingFunction;
+
             return new PrintingConfig<TOwner>(ExcludedTypes, ExcludedProperties,
                 typesPrinters, propertyPrinters, CulturesForNumbersTypes, StringPropertiesTrimmer);
         }
@@ -163,7 +165,7 @@ namespace ObjectPrinting
                 [typeof(TProp)] = culture
             };
             return new PrintingConfig<TOwner>(ExcludedTypes, ExcludedProperties, TypesPrinters,
-                PropetiesPrinters, culturesForNumbersTypes, StringPropertiesTrimmer);
+                   PropetiesPrinters, culturesForNumbersTypes, StringPropertiesTrimmer);
         }
 
         internal PrintingConfig<TOwner> SetStringTrimmer(int count)
@@ -173,14 +175,16 @@ namespace ObjectPrinting
 
             Func<string, string> trimmer = x => x.Substring(count);
 
-            var stringPropertiesTrimmer = string.IsNullOrEmpty(selectedProperty) ? typeof(TOwner).GetProperties()
-                    .Where(x => x.PropertyType == typeof(string))
-                    .Select(p => p.Name)
-                    .ToDictionary(name => name, value => trimmer)
-                : new Dictionary<string, Func<string, string>>(StringPropertiesTrimmer)
-                {
-                    [selectedProperty] = trimmer
-                };
+            var stringPropertiesTrimmer = string.IsNullOrEmpty(selectedProperty)
+                                        ? typeof(TOwner).GetProperties()
+                                        .Where(x => x.PropertyType == typeof(string))
+                                        .Select(p => p.Name)
+                                        .ToDictionary(name => name, value => trimmer)
+
+                                        : new Dictionary<string, Func<string, string>>(StringPropertiesTrimmer)
+                                        {
+                                            [selectedProperty] = trimmer
+                                        };
 
             selectedProperty = string.Empty;
 

@@ -41,7 +41,7 @@ namespace ObjectPrinting.Tests
         public void Print_WhenExcludingObjectType()
         {
             printer.Exclude<Person>();
-            var expected = "Person\r\n\tId = Guid\r\n\tName = Valera\r\n\tHeight = 200,5\r\n\tAge = 10\r\n";
+            var expected = "Person\r\n\tId = 00000000-0000-0000-0000-000000000000\r\n\tName = Valera\r\n\tHeight = 200,5\r\n\tAge = 10\r\n";
             printer.PrintToString(person).Should().Be(expected);
         }
 
@@ -50,7 +50,7 @@ namespace ObjectPrinting.Tests
         {
             printer = printer.ForType<string>().Using(x => x.ToUpper());
 
-            var expected = "Person\r\n\tId = Guid\r\n\tName = VALERA\r\n\tHeight = 200,5\r\n\tAge = 10\r\n";
+            var expected = "Person\r\n\tId = 00000000-0000-0000-0000-000000000000\r\n\tName = VALERA\r\n\tHeight = 200,5\r\n\tAge = 10\r\n";
             printer.PrintToString(person).Should().Be(expected);
         }
 
@@ -68,7 +68,7 @@ namespace ObjectPrinting.Tests
         {
             printer = printer.ForProperty(x => x.Age).Using(x => (x * 10).ToString());
 
-            var expected = "Person\r\n\tId = Guid\r\n\tName = Valera\r\n\tHeight = 200,5\r\n\tAge = 100\r\n";
+            var expected = "Person\r\n\tId = 00000000-0000-0000-0000-000000000000\r\n\tName = Valera\r\n\tHeight = 200,5\r\n\tAge = 100\r\n";
             printer.PrintToString(person).Should().Be(expected);
         }
 
@@ -78,7 +78,7 @@ namespace ObjectPrinting.Tests
             printer = printer.ForProperty(x => x.Age).Using(a => (a / 5).ToString())
                              .ForProperty(x => x.Name).Using(x => x.Replace("a", ""));
 
-            var expected = "Person\r\n\tId = Guid\r\n\tName = Vler\r\n\tHeight = 200,5\r\n\tAge = 2\r\n";
+            var expected = "Person\r\n\tId = 00000000-0000-0000-0000-000000000000\r\n\tName = Vler\r\n\tHeight = 200,5\r\n\tAge = 2\r\n";
             printer.PrintToString(person).Should().Be(expected);
         }
 
@@ -87,7 +87,7 @@ namespace ObjectPrinting.Tests
         {
             printer = printer.ForProperty(x => x.Name).CutTo(2);
 
-            var expected = "Person\r\n\tId = Guid\r\n\tName = lera\r\n\tHeight = 200,5\r\n\tAge = 10\r\n";
+            var expected = "Person\r\n\tId = 00000000-0000-0000-0000-000000000000\r\n\tName = lera\r\n\tHeight = 200,5\r\n\tAge = 10\r\n";
             printer.PrintToString(person).Should().Be(expected);
         }
 
@@ -117,14 +117,15 @@ namespace ObjectPrinting.Tests
         {
             printer = printer.Exclude(x => x.Height);
 
-            var expected = "Person\r\n\tId = Guid\r\n\tName = Valera\r\n\tAge = 10\r\n";
+            var expected = "Person\r\n\tId = 00000000-0000-0000-0000-000000000000\r\n\tName = Valera\r\n\tAge = 10\r\n";
             printer.PrintToString(person).Should().Be(expected);
         }
 
         [Test]
         public void ExcludeManyProperties()
         {
-            printer = printer.Exclude(x => x.Height).Exclude(x => x.Id);
+            printer = printer.Exclude(x => x.Height)
+                             .Exclude(x => x.Id);
 
             var expected = "Person\r\n\tName = Valera\r\n\tAge = 10\r\n";
             printer.PrintToString(person).Should().Be(expected);
@@ -134,10 +135,10 @@ namespace ObjectPrinting.Tests
         public void PrintWithCustomSettingsOfSerialization()
         {
             printer = printer.Exclude<Guid>()
-                .ForProperty(x => x.Height).Using(x => (x-0.5).ToString())
-                .ForType<double>().Using(CultureInfo.InvariantCulture)
-                .ForProperty(x=>x.Name).CutTo(3)
-                .ForProperty(x=>x.Name).Using(x=>x.ToUpper());
+                             .ForProperty(x => x.Height).Using(x => (x - 0.5).ToString())
+                             .ForType<double>().Using(CultureInfo.InvariantCulture)
+                             .ForProperty(x => x.Name).CutTo(3)
+                             .ForProperty(x => x.Name).Using(x => x.ToUpper());
 
             var expected = "Person\r\n\tName = ERA\r\n\tHeight = 200\r\n\tAge = 10\r\n";
             printer.PrintToString(person).Should().Be(expected);
@@ -147,7 +148,7 @@ namespace ObjectPrinting.Tests
         public void ExtendObjectToDefaultPrinting()
         {
             var actual = person.PrintToString();
-            var expected = "Person\r\n\tId = Guid\r\n\tName = Valera\r\n\tHeight = 200,5\r\n\tAge = 10\r\n";
+            var expected = "Person\r\n\tId = 00000000-0000-0000-0000-000000000000\r\n\tName = Valera\r\n\tHeight = 200,5\r\n\tAge = 10\r\n";
             actual.Should().Be(expected);
         }
 
@@ -166,7 +167,7 @@ namespace ObjectPrinting.Tests
         {
             printer = printer.ForType<double>().Using(CultureInfo.GetCultureInfo("eu-ES"));
 
-            var expected = "Person\r\n\tId = Guid\r\n\tName = Valera\r\n\tHeight = 200,5\r\n\tAge = 10\r\n";
+            var expected = "Person\r\n\tId = 00000000-0000-0000-0000-000000000000\r\n\tName = Valera\r\n\tHeight = 200,5\r\n\tAge = 10\r\n";
             printer.PrintToString(person).Should().Be(expected);
         }
     }
